@@ -51,7 +51,7 @@ def checkLogin(login, password):
             FROM 
                 account AS acc
             WHERE 
-                UPPER(acc.login) = UPPER(%s) 
+                LOWER(acc.login) = LOWER(%s) 
                 AND acc.password = %s
         """
 
@@ -176,8 +176,57 @@ Returns:
         - role: User's role (Customer, Artist, Staff)
 """
 def list_users(): 
-   
-    return None
+    try:
+        # Open database connection and cursor
+        db_conn = openConnection()
+        db_curs = db_conn.cursor()
+
+        # Query for list users
+        query_list_users = """
+            SELECT 
+                acc.login AS "login", 
+                acc.firstname AS "firstname", 
+                acc.lastname AS "lastname", 
+                acc.email AS "email", 
+                acc.role AS "role"
+            FROM 
+                account AS acc
+            ORDER BY 
+                acc.role ASC,
+                acc.login ASC
+        """
+
+        # Execute the query_list_users and store to query_result
+        db_curs.execute(query_list_users)
+        query_result = db_curs.fetchall()
+
+        # Checking query_result validity
+        if query_result:
+            result = []
+            for record in query_result:
+                record_dictionary = {
+                    "login": record[0],
+                    "firstname": record[1],
+                    "lastname": record[2],
+                    "email": record[3],
+                    "role": record[4]
+                }
+                result.append(record_dictionary)
+            return result
+        else:
+            return None
+
+    except psycopg2.Error as e:
+        # Print error message
+        print("Error: ", e.pgerror)
+        return None
+
+    finally:
+        # Close database cursor and connection
+        if db_curs:
+            db_curs.close()
+        if db_conn:
+            db_conn.close()
 
 """
 Retrieve all reviews from the database with associated track and customer information
@@ -192,8 +241,65 @@ Returns:
         - review_date: Date when the review was written
 """
 def list_reviews(): 
-    
-    return None
+    try:
+        # Open database connection and cursor
+        db_conn = openConnection()
+        db_curs = db_conn.cursor()
+
+        # Query for list reviews
+        query_list_reviews = """
+            SELECT 
+                rev.reviewid AS "reviewid", 
+                tra.title AS "track_title", 
+                rev.rating AS "rating", 
+                rev.content AS "content", 
+                rev.customerid AS "customer_login", 
+                CONCAT(acc.firstname, ' ', acc.lastname) AS "customer_name", 
+                rev.reviewdate AS "review_date"
+            FROM 
+                review AS rev
+            LEFT JOIN 
+                track AS tra ON rev.trackid = tra.id
+            LEFT JOIN 
+                account AS acc ON rev.customerid = acc.login
+            ORDER BY 
+                rev.reviewdate DESC,
+                rev.reviewid ASC
+        """
+
+        # Execute the query_list_reviews and store to query_result
+        db_curs.execute(query_list_reviews)
+        query_result = db_curs.fetchall()
+
+        # Checking query_result validity
+        if query_result:
+            result = []
+            for record in query_result:
+                record_dictionary = {
+                    "reviewid": record[0],
+                    "track_title": record[1],
+                    "rating": record[2],
+                    "content": record[3],
+                    "customer_login": record[4],
+                    "customer_name": record[5],
+                    "review_date": record[6]
+                }
+                result.append(record_dictionary)
+            return result
+        else:
+            return None
+
+    except psycopg2.Error as e:
+        # Print error message
+        print("Error: ", e.pgerror)
+        return None
+
+    finally:
+        # Close database cursor and connection
+        if db_curs:
+            db_curs.close()
+        if db_conn:
+            db_conn.close()
 
 """
 Search for tracks based on a search string
