@@ -1,0 +1,56 @@
+{% include 'top.html' %}
+
+<div class="content">
+    <div class="container">
+    <h1 class="title" align="center">Reviews</h1>
+    {% if session['iscustomer'] == True %}
+        <div style="display: flex; align-items: center; justify-content: center;">
+            <button class="pure-button"><a href="{{ url_for('add_review') }}">Add Review</a></button>
+        </div>
+    {% endif %}
+    <br/>
+    <table class="styled">
+        <thead>
+            <tr>
+                    <th>Review ID</th>
+                    <th>Track</th>
+                    <th>Rating</th>
+                    <th>Content</th>
+                    <th>Written By</th>
+                    <th>Review Date</th>
+                    <th>Update</th>
+
+            </tr>
+        </thead>
+        <tbody>
+        {% for item in review_list %}
+            <tr>
+                {% if item['customer_login'] == session['user'] %}
+                <form name="update_review_form" class="Update" method="POST" action="{{url_for('update_review')}}">
+                    <input type="hidden" id="reviewid" name="reviewid" value="{{item['reviewid']}}" />
+                    <td> {{item['reviewid']}} </td>
+                    <td> {{item['track_title']}}</td>
+                    <td> <input type="number" id="rating" name="rating" value="{{item['rating']}}" placeholder="{{item['rating']}}"  min="1" max="5" step="1">
+                    </td>
+                    <td class="textarea-column"> <textarea name="content" rows="3" cols="30" class="textarea">{{ item['content'] }}</textarea> </td>
+                    <td> {{item['customer_name']}}</td>
+                     <td> {{item['review_date']}}</td>
+                    <td> <button class="pure-button pure-button-primary" type="submit">Update</button>
+                    </td>
+                </form> 
+                {% else %}
+                    <td> {{item['reviewid']}}</td>
+                    <td> {{item['track_title']}}</td>
+                    <td> {{item['rating']}}</td>
+                    <td class="textarea-column"> {{item['content']}}</td>
+                    <td> {{item['customer_name']}}</td>
+                    <td> {{item['review_date']}}</td>
+                 {% endif %}
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+        </div>
+</div>
+{% include 'bottom.html' %}
+    

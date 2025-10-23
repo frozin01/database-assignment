@@ -1,0 +1,82 @@
+{% include 'top.html' %}
+
+<div class="content">
+    <div class="container">
+    <h1 class="title" align="center">Tracks</h1>
+    
+    <br/>
+    <div class="search">
+        <form class="search-top" method="POST" action="{{url_for('list_tracks')}}">
+            <input type="text" name="search" placeholder="Search" autofocus>
+            <button class="flat" type="submit">Find</button>
+            <div class="clear"></div>
+        </form>
+    </div>
+
+    <table class="styled">
+        <thead>
+            <tr>
+                {% if session['isstaff'] == True %}
+                <th>Track ID</th>
+                <th>Title</th>
+                <th>Duration</th>
+                <th>Age Restriction</th>
+                <th>Singer</th>
+                <th>Composer</th>
+                <th>Average Rating</th>
+                <th>Update</th>
+                {% else %}
+                <th>Track ID</th>
+                <th>Title</th>
+                <th>Duration</th>
+                <th>Age Restriction</th>
+                <th>Singer</th>
+                <th>Composer</th>
+                <th>Average Rating</th>
+                {% endif %}
+            </tr>
+        </thead>
+        <tbody>
+        {% for item in track_list %}
+            <tr>
+                {% if session['isstaff'] == True %}
+                
+                    <form name="{{item['trackid']}}_form" class="Update" method="POST" action="{{url_for('update_track')}}">
+                        <input type="hidden" id="trackid" name="trackid" value="{{item['trackid']}}" />
+                        <td><b> {{item['trackid']}} </b></td>
+                        <td> <input type="text" id="title" name="title" value="{{item['title']}}" placeholder="{{item['title']}}">
+                        </td>
+                        <td> <input type="number" id="duration" name="duration" value="{{item['duration']}}" placeholder="{{item['duration']}}" min="0" step="any">
+                        </td>
+                        <td> 
+                            <select name="age_restriction">
+                                <option value="True" {% if item['age_restriction'] %}selected{% endif %}>Yes</option>
+                                <option value="False" {% if not item['age_restriction'] %}selected{% endif %}>No</option>
+                            </select>
+                        </td>
+
+                        
+                        <td> <input type="text" id="singer" name="singer" value="{{item['singer_name']}}" placeholder="{{item['singer_name']}}">
+                        </td>
+                        <td> <input type="text" id="composer" name="composer" value="{{item['composer_name']}}" placeholder="{{item['composer_name']}}">
+                        </td>
+                        <td> {{item['avg_rating']}}</td>
+                        <td> <button class="pure-button pure-button-primary" type="submit">Update</button>
+                        </td>
+                    </form>
+                {% else %}
+                    <td><b> {{item['trackid']}} </b></td>
+                    <td> {{item['title']}}</td>
+                    <td> {{item['duration']}}</td>
+                    <td> {{ 'Yes' if item['age_restriction'] else 'No' }}</td>
+                    <td> {{item['singer_name']}}</td>
+                    <td> {{item['composer_name']}}</td>
+                    <td> {{item['avg_rating']}}</td>
+                {% endif %} 
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+        </div>
+</div>
+{% include 'bottom.html' %}
