@@ -43,15 +43,15 @@ def checkLogin(login, password):
 
         # Query for check login
         query_check_login = """
-            SELECT 
-                acc.login AS "login", 
-                acc.firstname AS "firstName", 
-                acc.lastname AS "lastName", 
+            SELECT
+                acc.login AS "login",
+                acc.firstname AS "firstName",
+                acc.lastname AS "lastName",
                 acc.role AS "role"
-            FROM 
+            FROM
                 account AS acc
-            WHERE 
-                LOWER(acc.login) = LOWER(%s) 
+            WHERE
+                LOWER(acc.login) = LOWER(%s)
                 AND acc.password = %s
         """
 
@@ -98,36 +98,36 @@ def list_tracks():
 
         # Query for list tracks
         query_list_tracks = """
-            SELECT 
-                tra.id AS "trackid", 
-                tra.title AS "title", 
-                tra.duration AS "duration", 
-                tra.age_restriction AS "age_restriction", 
-                CONCAT(acc_sin.firstname, ' ', acc_sin.lastname) AS "singer_name", 
-                CONCAT(acc_com.firstname, ' ', acc_com.lastname) AS "composer_name", 
+            SELECT
+                tra.id AS "trackid",
+                tra.title AS "title",
+                tra.duration AS "duration",
+                tra.age_restriction AS "age_restriction",
+                CONCAT(acc_sin.firstname, ' ', acc_sin.lastname) AS "singer_name",
+                CONCAT(acc_com.firstname, ' ', acc_com.lastname) AS "composer_name",
                 COALESCE(ROUND(AVG(rev.rating), 2), 0) AS "avg_rating"
-            FROM 
+            FROM
                 track AS tra
-            LEFT JOIN 
+            LEFT JOIN
                 artist AS art_sin ON tra.singer = art_sin.login
-            LEFT JOIN 
+            LEFT JOIN
                 account AS acc_sin ON art_sin.login = acc_sin.login
-            LEFT JOIN 
+            LEFT JOIN
                 artist AS art_com ON tra.composer = art_com.login
-            LEFT JOIN 
-                account AS acc_com ON art_sin.login = acc_com.login
-            LEFT JOIN 
+            LEFT JOIN
+                account AS acc_com ON art_com.login = acc_com.login
+            LEFT JOIN
                 review AS rev ON tra.id = rev.trackid
-            GROUP BY 
-                tra.id, 
-                tra.title, 
-                tra.duration, 
-                tra.age_restriction, 
-                acc_sin.firstname, 
-                acc_sin.lastname, 
-                acc_com.firstname, 
+            GROUP BY
+                tra.id,
+                tra.title,
+                tra.duration,
+                tra.age_restriction,
+                acc_sin.firstname,
+                acc_sin.lastname,
+                acc_com.firstname,
                 acc_com.lastname
-            ORDER BY 
+            ORDER BY
                 tra.id ASC
         """
 
@@ -183,15 +183,15 @@ def list_users():
 
         # Query for list users
         query_list_users = """
-            SELECT 
-                acc.login AS "login", 
-                acc.firstname AS "firstname", 
-                acc.lastname AS "lastname", 
-                acc.email AS "email", 
+            SELECT
+                acc.login AS "login",
+                acc.firstname AS "firstname",
+                acc.lastname AS "lastname",
+                acc.email AS "email",
                 acc.role AS "role"
-            FROM 
+            FROM
                 account AS acc
-            ORDER BY 
+            ORDER BY
                 acc.role ASC,
                 acc.login ASC
         """
@@ -248,21 +248,23 @@ def list_reviews():
 
         # Query for list reviews
         query_list_reviews = """
-            SELECT 
-                rev.reviewid AS "reviewid", 
-                tra.title AS "track_title", 
-                rev.rating AS "rating", 
-                rev.content AS "content", 
-                rev.customerid AS "customer_login", 
-                CONCAT(acc.firstname, ' ', acc.lastname) AS "customer_name", 
-                rev.reviewdate AS "review_date"
-            FROM 
+            SELECT
+                rev.reviewid AS "reviewid",
+                tra.title AS "track_title",
+                rev.rating AS "rating",
+                rev.content AS "content",
+                rev.customerid AS "customer_login",
+                CONCAT(acc.firstname, ' ', acc.lastname) AS "customer_name",
+                TO_CHAR(rev.reviewdate, 'DD-MM-YYYY') AS "review_date"
+            FROM
                 review AS rev
-            LEFT JOIN 
+            LEFT JOIN
                 track AS tra ON rev.trackid = tra.id
-            LEFT JOIN 
-                account AS acc ON rev.customerid = acc.login
-            ORDER BY 
+            LEFT JOIN
+                customer AS cus ON rev.customerid = cus.login
+            LEFT JOIN
+                account AS acc ON cus.login = acc.login
+            ORDER BY
                 rev.reviewdate DESC,
                 rev.reviewid ASC
         """
