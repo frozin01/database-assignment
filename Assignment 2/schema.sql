@@ -121,3 +121,57 @@ VALUES
     (11,'Absolutely addictive track! The harmonies are incredible and the beat drops at perfect moments.',5,'jdoe', '2025-09-20'),
     (11,'This song has been on repeat all day! Dream Girls really delivered a masterpiece here.',5, 'pop', '2025-07-21'),
     (11,'Best release of the year! The production quality is outstanding and the vocals are flawless.',5, 'fan_maria', '2025-07-22');
+
+--1. CREATE OR REPLACE FUNCTION add_user
+CREATE OR REPLACE FUNCTION public.add_user(p_login character varying, p_firstname character varying, p_lastname character varying, p_password character varying, p_email character varying, p_role character varying)
+ RETURNS boolean
+ LANGUAGE plpgsql
+AS $function$
+DECLARE
+	login_lower VARCHAR(30);
+BEGIN
+	--The system will automatically save and store it in lowercase
+	login_lower := LOWER(p_login);
+
+	--INSERT INTO Account Table
+	INSERT INTO account (login, firstname, lastname, email, PASSWORD, role)
+	VALUES (login_lower, p_firstname, p_lastname, p_email, p_password, p_role);
+	
+	IF p_role = 'Customer' THEN
+		INSERT INTO Customer (login) VALUES (login_lower);
+	ELSIF p_role = 'Artist' THEN
+		INSERT INTO Artist (login) VALUES (login_lower);
+	END IF; 
+	
+	RETURN TRUE;
+
+EXCEPTION 	
+	WHEN OTHERS THEN
+		RETURN FALSE;
+	
+END;
+$function$
+;
+
+--2. CREATE OR REPLACE FUNCTION add_review
+CREATE OR REPLACE FUNCTION public.add_review(p_trackid integer, p_rating integer, p_customerid character varying, p_content text, p_review_date date)
+ RETURNS boolean
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+    -- cannot be set in the future (from today’s date)
+    IF p_review_date > CURRENT_DATE THEN
+        RETURN FALSE;
+    END IF;
+    
+    INSERT INTO Review (trackID, CONTENT, rating, customerID, reviewDate)
+    VALUES (p_trackid, p_content, p_rating, p_customerid, p_review_date);
+    
+    RETURN TRUE;
+    
+EXCEPTION
+    WHEN OTHERS THEN
+        RETURN FALSE;
+END;
+$function$
+;

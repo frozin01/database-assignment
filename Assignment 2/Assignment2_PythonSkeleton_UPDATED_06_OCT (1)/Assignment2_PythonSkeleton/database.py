@@ -318,8 +318,74 @@ Returns:
         - avg_rating: Average rating from all reviews (0 if no reviews)
 """
 def find_tracks(searchString):
+    conn = None
+    tracks_list = []
     
-    return None
+    try:
+        conn = openConnection()
+        cur = conn.cursor()
+        
+        # Same query with list_tracks, but with filter WHERE LOWER(tra.title) LIKE LOWER(%s) and 'ORDER BY "avg_rating" DESC
+        sql_query = """
+            SELECT
+                tra.id AS "trackid",
+                tra.title AS "title",
+                tra.duration AS "duration",
+                tra.age_restriction AS "age_restriction",
+                CONCAT(acc_sin.firstname, ' ', acc_sin.lastname) AS "singer_name",
+                CONCAT(acc_com.firstname, ' ', acc_com.lastname) AS "composer_name",
+                COALESCE(ROUND(AVG(rev.rating), 2), 0) AS "avg_rating"
+            FROM
+                track AS tra
+            LEFT JOIN
+                artist AS art_sin ON tra.singer = art_sin.login
+            LEFT JOIN
+                account AS acc_sin ON art_sin.login = acc_sin.login
+            LEFT JOIN
+                artist AS art_com ON tra.composer = art_com.login
+            LEFT JOIN
+                account AS acc_com ON art_com.login = acc_com.login
+            LEFT JOIN
+                review AS rev ON tra.id = rev.trackid
+            WHERE 
+                LOWER(tra.title) LIKE LOWER(%s)
+            GROUP BY
+                tra.id, tra.title, tra.duration, tra.age_restriction,
+                acc_sin.firstname, acc_sin.lastname,
+                acc_com.firstname, acc_com.lastname
+            ORDER BY
+                "avg_rating" DESC
+        """
+
+        #LIKE parameter
+        search_word = f'%{searchString}%'
+        
+        cur.execute(sql_query, (search_word,))
+        rows = cur.fetchall()
+        
+        #checking query result validity
+        for row in rows:
+            record_dictionary = {
+                "trackid": row[0],
+                "title": row[1],
+                "duration": row[2],
+                "age_restriction": row[3],
+                "singer_name": row[4],
+                "composer_name": row[5],
+                "avg_rating": row[6]
+            }
+            tracks_list.append(record_dictionary)
+
+        cur.close()
+        return tracks_list
+
+    except psycopg2.Error as e:
+        print("Error while finding tracks: ", e.pgerror)
+        return None
+        
+    finally:
+        if conn is not None:
+            conn.close()
 
 """
 Add a new user to the database
@@ -334,8 +400,35 @@ Returns:
     True if user added successfully, False if error occurred
 """
 def add_user(login, firstname, lastname, password, email, role):
+    conn = None
+    success = False
 
-    return True
+    try:
+        conn = openConnection()
+        cur = conn.cursor()
+
+        # Call function add_user
+        sql_query = "SELECT add_user(%s, %s, %s, %s, %s, %s)"
+
+        cur.execute(sql_query, (login, firstname, lastname, password, email, role))
+
+        success = cur.fetchone()[0]
+
+        conn.commit() #commit after changes in database
+
+        cur.close()
+
+    except psycopg2.Error as e:
+        print("Error while adding user:", e.pgerror)
+        if conn:
+            conn.rollback()
+        success = False
+
+    finally:
+        if conn is not None:
+            conn.close()
+
+    return success
 
 """
 Add a new review to the database
@@ -350,7 +443,35 @@ Returns:
 """
 def add_review(trackid, rating, customer_login, content, review_date):
    
-    return True
+    conn = None
+    success = False
+    
+    try:
+        conn = openConnection()
+        cur = conn.cursor()
+        
+        # Call function add_review
+        sql_query = "SELECT add_review(%s, %s, %s, %s, %s)"
+        
+        cur.execute(sql_query, (trackid, rating, customer_login, content, review_date))
+        
+        success = cur.fetchone()[0]
+        
+        conn.commit() #commit after changes in database
+        
+        cur.close()
+
+    except psycopg2.Error as e:
+        print("Error while adding review:", e.pgerror)
+        if conn:
+            conn.rollback()
+        success = False
+        
+    finally:
+        if conn is not None:
+            conn.close()
+            
+    return success
 
 """
 Update an existing track in the database
@@ -366,7 +487,35 @@ Returns:
 """
 def update_track(trackid, title, duration, age_restriction, singer_login, composer_login):
 
-    return True
+    conn = openConnection()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        query = """
+            UPDATE track
+            SET title = %s,
+                duration = %s,
+                age_restriction = %s,
+                singer = CASE WHEN %s IS NULL OR LOWER(%s) IN (SELECT LOWER(login) FROM artist) THEN LOWER(%s) ELSE singer END,
+                composer = CASE WHEN %s IS NULL OR LOWER(%s) IN (SELECT LOWER(login) FROM artist) THEN LOWER(%s) ELSE composer END
+            WHERE id = %s;
+        """
+        cur.execute(query, (
+            title, duration, age_restriction,
+            singer_login, singer_login, singer_login,
+            composer_login, composer_login, composer_login,
+            trackid
+        ))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return True
+    except Exception as e:
+
+        print("update_track error:", e)
+        conn.rollback()
+        return False
 
 """
 Update an existing review in the database
@@ -380,7 +529,27 @@ Returns:
 """
 def update_review(reviewid, rating, content):
 
-    return True
+    conn = openConnection()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        query = """
+            UPDATE review
+            SET rating = %s,
+                content = %s
+            WHERE reviewid = %s;
+        """
+        cur.execute(query, (rating, content, reviewid))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return True
+    except Exception as e:
+
+        print("update review error:", e)
+        conn.rollback()
+        return False
 
 """
 Update an existing user in the database
@@ -394,5 +563,26 @@ Returns:
 """
 def update_user(user_login, firstname, lastname ,email ):
 
-    return True
+    conn = openConnection()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        query = """
+            UPDATE account
+            SET firstname = %s,
+                lastname = %s,
+                email = %s
+            WHERE LOWER(login) = LOWER(%s);
+        """
+        cur.execute(query, (firstname, lastname, email, user_login))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return True
+    except Exception as e:
+
+        print("update user error:", e)
+        conn.rollback()
+        return False
 
