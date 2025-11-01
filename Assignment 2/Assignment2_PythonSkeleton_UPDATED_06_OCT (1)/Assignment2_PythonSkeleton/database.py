@@ -442,7 +442,6 @@ Returns:
     True if review added successfully, False if error occurred
 """
 def add_review(trackid, rating, customer_login, content, review_date):
-   
     conn = None
     success = False
     
@@ -486,33 +485,17 @@ Returns:
     True if track updated successfully, False if error occurred
 """
 def update_track(trackid, title, duration, age_restriction, singer_login, composer_login):
-
     conn = openConnection()
     if not conn:
         return False
     try:
         cur = conn.cursor()
-        query = """
-            UPDATE track
-            SET title = %s,
-                duration = %s,
-                age_restriction = %s,
-                singer = CASE WHEN %s IS NULL OR LOWER(%s) IN (SELECT LOWER(login) FROM artist) THEN LOWER(%s) ELSE singer END,
-                composer = CASE WHEN %s IS NULL OR LOWER(%s) IN (SELECT LOWER(login) FROM artist) THEN LOWER(%s) ELSE composer END
-            WHERE id = %s;
-        """
-        cur.execute(query, (
-            title, duration, age_restriction,
-            singer_login, singer_login, singer_login,
-            composer_login, composer_login, composer_login,
-            trackid
-        ))
+        cur.execute("SELECT sm_update_track(%s,%s,%s,%s,%s,%s);",
+                    (trackid, title, duration, age_restriction, singer_login, composer_login))
         conn.commit()
-        cur.close()
-        conn.close()
+        cur.close(); conn.close()
         return True
     except Exception as e:
-
         print("update_track error:", e)
         conn.rollback()
         return False
@@ -528,7 +511,6 @@ Returns:
     True if review updated successfully, False if error occurred
 """
 def update_review(reviewid, rating, content):
-
     conn = openConnection()
     if not conn:
         return False
@@ -562,7 +544,6 @@ Returns:
     True if user updated successfully, False if error occurred
 """
 def update_user(user_login, firstname, lastname ,email ):
-
     conn = openConnection()
     if not conn:
         return False
@@ -585,4 +566,3 @@ def update_user(user_login, firstname, lastname ,email ):
         print("update user error:", e)
         conn.rollback()
         return False
-

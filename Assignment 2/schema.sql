@@ -175,3 +175,50 @@ EXCEPTION
 END;
 $function$
 ;
+
+--------------------------------------------------------------------------------
+--  Update track details via stored function
+--------------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION sm_update_track(
+  p_trackid          integer,
+  p_title            varchar,
+  p_duration         numeric,
+  p_age_restriction  boolean,
+  p_singer_login     varchar,
+  p_composer_login   varchar
+)
+RETURNS void LANGUAGE plpgsql AS $$
+DECLARE
+  v_singer   varchar;
+  v_composer varchar;
+BEGIN
+  -- Normalise provided logins (allow NULL)
+  IF p_singer_login IS NOT NULL THEN
+    SELECT login INTO v_singer
+    FROM artist
+    WHERE lower(login) = lower(trim(p_singer_login));
+    IF v_singer IS NULL THEN
+      RAISE EXCEPTION 'Invalid singer login: %', p_singer_login
+        USING ERRCODE = '23503'; -- foreign_key_violation semantics
+    END IF;
+  END IF;
+
+  IF p_composer_login IS NOT NULL THEN
+    SELECT login INTO v_composer
+    FROM artist
+    WHERE lower(login) = lower(trim(p_composer_login));
+    IF v_composer IS NULL THEN
+      RAISE EXCEPTION 'Invalid composer login: %', p_composer_login
+        USING ERRCODE = '23503';
+    END IF;
+  END IF;
+
+  UPDATE track
+  SET title = p_title,
+      duration = p_duration,
+      age_restriction = p_age_restriction,
+      singer = CASE WHEN p_singer_login IS NULL THEN NULL ELSE lower(trim(v_singer)) END,
+      composer = CASE WHEN p_composer_login IS NULL THEN NULL ELSE lower(trim(v_composer)) END
+  WHERE id = p_trackid;
+END;
+$$;
